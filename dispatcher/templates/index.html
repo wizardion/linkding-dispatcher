@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+
+<html lang="en" data-api-base-url="/api/">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="/static/favicon.ico" sizes="48x48">
+    <link rel="icon" href="/static/favicon.svg" sizes="any" type="image/svg+xml">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+    <link rel="mask-icon" href="/static/safari-pinned-tab.svg" color="#5856e0">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="search" type="application/opensearchdescription+xml" title="Linkding" href="/opensearch.xml" />
+    <!-- <meta name="apple-mobile-web-app-capable" content="yes"> -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimal-ui">
+    <meta name="description" content="Self-hosted bookmark service">
+    <meta name="robots" content="index,follow">
+    <meta name="author" content="Sascha Ißbrücker">
+    <title>New bookmark - Linkding</title>
+
+    <link href="/static/theme-dark.css?v=1.45.0" rel="stylesheet" type="text/css"
+        media="(prefers-color-scheme: dark)" />
+    <link href="/static/theme-light.css?v=1.45.0" rel="stylesheet" type="text/css"
+        media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161822">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#5856e0">
+
+    <meta name="turbo-cache-control" content="no-preview">
+    <meta name="turbo-prefetch" content="false">
+    <style>
+        html,
+        body {
+            background: #fff;
+        }
+
+        @media (prefers-color-scheme: dark) {
+
+            html,
+            body {
+                background: #1f1e29;
+            }
+        }
+    </style>
+    <style>
+        .btn-remove {
+            width: 100%;
+            color: var(--error-color-highlight) !important;
+            color: white;
+        }
+
+        .disabled {
+            cursor: default;
+            opacity: .5;
+            pointer-events: none;
+            background-color: var(--input-disabled-bg-color);
+            cursor: not-allowed
+        }
+    </style>
+</head>
+
+<body>
+    <div class="content container">
+        <div class="bookmarks-form-page">
+            <main aria-labelledby="main-heading">
+                <div class="section-header">
+                    <header class="container" style="width: 100%; padding: 0; margin: 0px">
+                        <div class="d-flex justify-between">
+                            <div class="app-link d-flex align-center">
+                                <img class="app-logo" src="/static/logo.png" alt="Application logo">
+                                <span class="app-name">LINKDING</span>
+                            </div>
+                            <h1 id="main-heading1">New bookmark</h1>
+                        </div>
+                    </header>
+                </div>
+                <form action="#" method="post" novalidate="">
+                    <div class="bookmarks-form">
+                        <!-- URL -->
+                        <div class="form-group">
+                            <label for="id_url" class="form-label">URL</label>
+                            <div class="has-icon-right">
+                                {% if url %}
+                                <input type="text" name="url" value="{{ url }}" class="form-input disabled"
+                                    autocomplete="off" aria-invalid="false" id="id_url" readonly>
+                                {% else %}
+                                <input type="text" name="url" class="form-input" autocomplete="off" aria-invalid="false"
+                                    required id="id_url">
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- TITLE -->
+                        <div class="form-group">
+                            <div class="d-flex justify-between align-baseline">
+                                <label for="id_title" class="form-label">Title</label>
+                            </div>
+                            <input type="text" value="{{ metadata.title }}" name="title" class="form-input"
+                                autocomplete="off" autofocus maxlength="512" id="id_title">
+                        </div>
+
+                        <!-- BUNDLE -->
+                        <div class="form-group">
+                            <label for="id_bundle_string" class="form-label">Bundle</label>
+                            <select id="id_bundle_string" class="form-input" aria-describedby="id_bundle_help">
+                                <option value="">-- No Bundle --</option>
+                                {% for b in bundles %}
+                                <option value="{{ b.all_tags }}" data-name="{{ b.name }}">{{ b.name }}</option>
+                                {% endfor %}
+                            </select>
+
+                            <div id="id_bundle_help" class="form-input-hint">
+                                Select a bundle to automatically fill the tags associated with it.
+                            </div>
+                        </div>
+
+                        <!-- TAGS -->
+                        <div class="form-group">
+                            <label for="id_tag_string" class="form-label">Tags</label>
+                            <!-- <ld-tag-autocomplete input-id="id_tag_string" input-name="tag_string" input-value=""
+                                            input-aria-describedby="id_tag_string_help">
+                                            <div class="form-autocomplete ">
+                                                <div class="form-autocomplete-input form-input ">
+                                                    <input type="text" autocomplete="off" autocapitalize="off" id="id_tag_string"
+                                                        name="tag_string" placeholder=" " class="form-input "
+                                                        aria-describedby="id_tag_string_help">
+                                                </div>
+                                                <ul class="menu "></ul>
+                                            </div>
+                                        </ld-tag-autocomplete> -->
+                            <input type="text" autocomplete="off" autocapitalize="off" id="id_tag_string"
+                                name="tag_names" placeholder=" " class="form-input"
+                                aria-describedby="id_tag_string_help" style="text-transform: lowercase;"
+                                autocapitalize="none">
+                            <div id="id_tag_string_help" class="form-input-hint">
+                                Enter any number of tags separated by space.
+                            </div>
+                            <div class="form-input-hint auto-tags" style="display: none;"></div>
+                        </div>
+
+                        <!-- ARCHIVE -->
+                        <div class="form-group">
+                            <div class="form-checkbox">
+                                <input type="checkbox" name="is_archived" aria-describedby="id_is_archived_help"
+                                    id="id_is_archived">
+                                <i class="form-icon"></i><label for="id_is_archived">Mark as Archived</label>
+                            </div>
+                            <div id="id_is_archived_help" class="form-input-hint">
+                                Archived bookmarks are hidden from the main view.
+                            </div>
+                        </div>
+
+                        <!-- ADDITIONAL DETAILS -->
+                        <div>
+                            <details>
+                                <summary><span class="form-label d-inline-block">Additional Details:</span></summary>
+
+                                <!-- DESCRIPTION -->
+                                <div class="form-group">
+                                    <div class="d-flex justify-between align-baseline">
+                                        <label for="id_description" class="form-label">Description</label>
+                                    </div>
+                                    <textarea name="description" cols="40" rows="3" class="form-input"
+                                        id="id_description">{{ metadata.description }}</textarea>
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="form-group d-flex1 justify-between1">
+                        <button type="submit" class="btn btn-primary btn-wide" style="width: 100%;">
+                            {% if bookmark %}Update Bookmark{% else %}Save Bookmark{% endif %}
+                        </button>
+                    </div>
+
+                    {% if bookmark %}
+                    <div class="form-group d-flex1 justify-between1">
+                        <button id="deleteBtn" class="btn btn-remove">
+                            Remove Bookmark
+                        </button>
+                    </div>
+                    {% endif %}
+                </form>
+            </main>
+        </div>
+    </div>
+    <script>
+        const bookmarkForm = document.querySelector("form");
+        const bookmark = {{ bookmark | tojson if bookmark else 'null' }};
+
+        populateTags();
+
+        bookmarkForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const data = getFormData(bookmarkForm);
+
+            console.log("Form data to be sent:", data);
+        });
+
+        function getFormData(form) {
+            const formData = new FormData(bookmarkForm);
+            const bundleSelect = document.getElementById('id_bundle_string');
+            const data = Object.fromEntries(formData.entries());
+
+            if (formData.has('is_archived')) {
+                data['is_archived'] = true;
+            } else {
+                data['is_archived'] = false;
+            }
+
+            if (formData.has('tag_names')) {
+                const tagNames = formData.get('tag_names').split(/[, ]+/).map(t => t.trim().toLowerCase()).filter(t => t.length > 0);
+
+                if (bundleSelect.value) {
+                    tagNames.push(bundleSelect.value);
+                }
+
+                data['tag_names'] = tagNames;
+            }
+
+            return data;
+        }
+
+        async function updateBookmark() {
+            const res = await fetch('./save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url: urlInput.value,
+                    tags: finalTags,
+                    is_archived: archiveCheckbox.checked
+                })
+            });
+        }
+
+        function populateTags() {
+            if (bookmark && bookmark.tag_names) {
+                const tagsInput = document.getElementById('id_tag_string');
+                const bundleSelect = document.getElementById('id_bundle_string');
+
+                let currentTags = bookmark.tag_names;
+                let matchedBundleTag = "";
+
+                const options = bundleSelect.options;
+                for (let i = 0; i < options.length; i++) {
+                    const bundleTag = options[i].value;
+                    if (bundleTag && currentTags.includes(bundleTag)) {
+                        bundleSelect.selectedIndex = i;
+                        matchedBundleTag = bundleTag;
+                        break;
+                    }
+                }
+
+                // Hide the bundle tag from the visual textbox
+                const visibleTags = currentTags.filter(t => t !== matchedBundleTag);
+                tagsInput.value = visibleTags.join(', ');
+            }
+        }
+    </script>
+</body>
+
+</html>

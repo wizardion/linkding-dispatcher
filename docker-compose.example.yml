@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  linkding_db:
+    image: postgres:16-alpine
+    container_name: linkding_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ...
+      POSTGRES_PASSWORD: ...
+      POSTGRES_DB: ...
+    volumes:
+      # Explicit bind mount for Postgres data files
+      - /.../postgresql/data:/var/lib/postgresql/data
+
+  linkding:
+    container_name: linkding
+    image: sissbruecker/linkding:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:9090"
+    volumes:
+      # Assets folder (holds downloaded website favicons and HTML previews)
+      - /.../linkding/data:/etc/linkding/data
+    environment:
+      # Tell Linkding to connect to the Postgres container instead of using SQLite
+      - LD_DB_ENGINE=postgres
+      - LD_DB_HOST=linkding_db
+      - LD_DB_PORT=5432
+      - LD_DB_USER=...
+      - LD_DB_PASSWORD=...
+      - LD_DB_NAME=...
+      # Automatic Admin Creation
+      - LD_SUPERUSER_NAME=...
+      - LD_SUPERUSER_PASSWORD=...
+    depends_on:
+      - linkding_db
+
+  memcached:
+    image: memcached:alpine
+    container_name: linkding_memcached
+    restart: unless-stopped
+
+  dispatcher:
+    container_name: linkding_dispatcher
+    build: ./dispatcher
+    restart: unless-stopped
+    environment:
+      - LINKDING_HOST=linkding
+      - LINKDING_PORT=9090
+      - LINKDING_TOKEN=...
+
+      - MEMCACHE_HOST=memcached
+      - MEMCACHE_PORT=11211
+      - CACHE_LOGGING_ENABLED=true
+    ports:
+      - "127.0.0.1:8001:8000"
+    depends_on:
+      - memcached
+      - linkding
