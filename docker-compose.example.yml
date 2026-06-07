@@ -1,4 +1,4 @@
-version: '3.8'
+# version: '3.8'
 
 services:
   linkding_db:
@@ -6,12 +6,13 @@ services:
     container_name: linkding_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ...
+      POSTGRES_USER: linkding
       POSTGRES_PASSWORD: ...
-      POSTGRES_DB: ...
+      POSTGRES_DB: linkding
     volumes:
-      # Explicit bind mount for Postgres data files
-      - /.../postgresql/data:/var/lib/postgresql/data
+      - /var/lib/docker/apps/linkding/postgresql/data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
 
   linkding:
     container_name: linkding
@@ -20,19 +21,18 @@ services:
     ports:
       - "127.0.0.1:3000:9090"
     volumes:
-      # Assets folder (holds downloaded website favicons and HTML previews)
-      - /.../linkding/data:/etc/linkding/data
+      - /var/lib/docker/apps/linkding/data:/etc/linkding/data
     environment:
-      # Tell Linkding to connect to the Postgres container instead of using SQLite
       - LD_DB_ENGINE=postgres
       - LD_DB_HOST=linkding_db
       - LD_DB_PORT=5432
-      - LD_DB_USER=...
+      - LD_DB_USER=linkding
       - LD_DB_PASSWORD=...
-      - LD_DB_NAME=...
+      - LD_DB_NAME=linkding
       # Automatic Admin Creation
-      - LD_SUPERUSER_NAME=...
+      - LD_SUPERUSER_NAME=alex-admin
       - LD_SUPERUSER_PASSWORD=...
+      - LD_CSRF_TRUSTED_ORIGINS=http://bookmarks.local:8080/
     depends_on:
       - linkding_db
 
@@ -40,21 +40,82 @@ services:
     image: memcached:alpine
     container_name: linkding_memcached
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:11211:11211"
+
+  redis:
+    image: redis:7-alpine
+    container_name: linkding_redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
 
   dispatcher:
     container_name: linkding_dispatcher
-    build: ./dispatcher
+    build: ./backend
     restart: unless-stopped
     environment:
       - LINKDING_HOST=linkding
       - LINKDING_PORT=9090
       - LINKDING_TOKEN=...
 
+      - DB_HOST=linkding_db
+      - DB_PORT=5432
+      - DB_USER=linkding
+      - DB_PASSWORD=besne5-Fenvaw-cojpok
+      - DB_NAME=linkding
+
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
       - MEMCACHE_HOST=memcached
       - MEMCACHE_PORT=11211
       - CACHE_LOGGING_ENABLED=true
     ports:
-      - "127.0.0.1:8001:8000"
+      - "127.0.0.1:8012:8000"
     depends_on:
+      - redis
       - memcached
       - linkding
+      - linkding_db
+
+  worker:
+    container_name: linkding_worker
+    build: ./backend
+    command: arq dispatcher.workers.WorkerSettings
+    restart: unless-stopped
+    environment:
+      - LINKDING_HOST=linkding
+      - LINKDING_PORT=9090
+      - LINKDING_TOKEN=...
+
+      - DB_HOST=linkding_db
+      - DB_PORT=5432
+      - DB_USER=linkding
+      - DB_PASSWORD=...
+      - DB_NAME=linkding
+
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+      - MEMCACHE_HOST=memcached
+      - MEMCACHE_PORT=11211
+    depends_on:
+      - redis
+      - memcached
+      - linkding
+      - linkding_db
+
+  web:
+    container_name: web_form
+    build: ./web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:80"
+    depends_on:
+      - dispatcher
+      - worker
+
+networks:
+  default:
+    name: linkding-app

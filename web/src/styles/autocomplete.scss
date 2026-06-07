@@ -1,0 +1,10 @@
+.autocomplete-wrapper {
+    position: relative;
+}
+
+.autocomplete-wrapper>.dropdown-menu {
+    left: 0;
+    right: 0;
+    max-height: 13rem;
+    overflow-y: auto;
+}

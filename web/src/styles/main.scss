@@ -1,0 +1,73 @@
+// 2. Override specific theme color variables
+$primary: #4644d5;
+$danger: #ff4136;
+$success: #2ecc71;
+
+$focus-ring-width: 3px;
+$focus-ring-opacity: .25;
+$focus-ring-color: rgba($primary, $focus-ring-opacity);
+// $focus-ring-box-shadow: 0 0 0 $focus-ring-width $focus-ring-color;
+$focus-ring-box-shadow: none;
+
+@import "bootstrap/scss/bootstrap";
+
+.form-check-danger {
+    .form-check-input:checked {
+        background-color: $danger;
+        border-color: $danger;
+    }
+
+    .form-check-input:focus {
+        box-shadow: 0 0 0 0.25rem rgba($danger, .25);
+        border-color: tint-color($danger, 50%);
+    }
+}
+
+.card {
+    border: var(--bs-border-width) solid var(--bs-border-color) !important;
+
+    .card-header {
+        border: none;
+    }
+
+    &[open] {
+        .card-header {
+            border-bottom: var(--bs-border-width) solid var(--bs-border-color);
+        }
+    }
+}
+
+.section-header .app-logo {
+    height: 28px;
+    width: 28px;
+}
+
+.section-header .app-name {
+    font-size: 1rem;
+    font-weight: 500;
+    margin-left: 0.6rem;
+    color: var(--bs-primary);
+}
+
+.section-header h1 {
+    font-size: 1rem;
+    line-height: 1.8rem;
+    margin: 0;
+}
+
+.list-group-scrollable-x-3 {
+    box-sizing: border-box !important;
+    max-height: 7.4rem;
+}
+
+.list-group-item {
+    height: 2.5rem;
+    box-sizing: border-box !important;
+}
+
+.form-control:focus {
+    border-color: var(--bs-border-color);
+    outline-offset: calc(2px * -1);
+    outline: 2px solid var(--bs-primary);
+    box-shadow: none;
+}
