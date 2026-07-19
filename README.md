@@ -82,9 +82,9 @@ The application consists of two main components:
    ```
 
 4. **Access the application**:
-   - API: `http://localhost:8000/api/v1/dispatcher/`
-   - Web UI: `http://localhost:8080/`
-   - Linkding: `http://localhost:3000/`
+   - API: `http://bookmarks.local:8080/api/v1/dispatcher/`
+   - Web UI: `http://bookmarks.local:8080/dispatcher/`
+   - Linkding: `http://bookmarks.local:8080/`
 
 ### Local Development Setup
 
@@ -303,23 +303,16 @@ npm run format
 npm run deploy
 ```
 
-## 📚 API Documentation
-
-The API documentation is available at:
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
-
 ### Key Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/v1/dispatcher/bookmarks` | List all bookmarks |
-| POST | `/api/v1/dispatcher/bookmarks` | Create a new bookmark |
-| GET | `/api/v1/dispatcher/bookmarks/{id}` | Get bookmark details |
-| PUT | `/api/v1/dispatcher/bookmarks/{id}` | Update a bookmark |
-| DELETE | `/api/v1/dispatcher/bookmarks/{id}` | Delete a bookmark |
-| GET | `/api/v1/dispatcher/users/preferences` | Get user preferences |
-| POST | `/api/v1/dispatcher/users/preferences` | Update preferences |
+| GET | `/api/v10/dispatcher/bookmark/check` | Check if URL is bookmarked |
+| GET | `/api/v10/dispatcher/bookmark/metadata` | Get bookmark metadata and Linkding info |
+| GET | `/api/v10/dispatcher/bookmark/info` | Get tags, bundles, and user preferences |
+| GET | `/api/v10/dispatcher/bookmark/job/status/{job_id}` | Get background job status |
+| POST | `/api/v10/dispatcher/bookmark/` | Save a new bookmark (async job) |
+| DELETE | `/api/v10/dispatcher/bookmark/{bookmark_id}` | Remove a bookmark (async job) |
 
 ## 📝 Contributing
 
