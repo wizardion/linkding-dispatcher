@@ -306,8 +306,8 @@ npm run deploy
 ## 📚 API Documentation
 
 The API documentation is available at:
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
+- **Swagger UI**: `http://bookmarks.local:8000/docs`
+- **ReDoc**: `http://bookmarks.local:8000/redoc`
 
 ### Key Endpoints
 
