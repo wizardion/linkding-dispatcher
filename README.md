@@ -82,9 +82,9 @@ The application consists of two main components:
    ```
 
 4. **Access the application**:
-   - API: `http://localhost:8000/api/v1/dispatcher/`
-   - Web UI: `http://localhost:8080/`
-   - Linkding: `http://localhost:3000/`
+   - API: `http://bookmarks.local:8080/api/v1/dispatcher/`
+   - Web UI: `http://bookmarks.local:8080/dispatcher/`
+   - Linkding: `http://bookmarks.local:8080/`
 
 ### Local Development Setup
 
@@ -302,12 +302,6 @@ npm run format
 ```bash
 npm run deploy
 ```
-
-## 📚 API Documentation
-
-The API documentation is available at:
-- **Swagger UI**: `http://bookmarks.local:8000/docs`
-- **ReDoc**: `http://bookmarks.local:8000/redoc`
 
 ### Key Endpoints
 
