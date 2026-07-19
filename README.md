@@ -313,13 +313,12 @@ The API documentation is available at:
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/v1/dispatcher/bookmarks` | List all bookmarks |
-| POST | `/api/v1/dispatcher/bookmarks` | Create a new bookmark |
-| GET | `/api/v1/dispatcher/bookmarks/{id}` | Get bookmark details |
-| PUT | `/api/v1/dispatcher/bookmarks/{id}` | Update a bookmark |
-| DELETE | `/api/v1/dispatcher/bookmarks/{id}` | Delete a bookmark |
-| GET | `/api/v1/dispatcher/users/preferences` | Get user preferences |
-| POST | `/api/v1/dispatcher/users/preferences` | Update preferences |
+| GET | `/api/v10/dispatcher/bookmark/check` | Check if URL is bookmarked |
+| GET | `/api/v10/dispatcher/bookmark/metadata` | Get bookmark metadata and Linkding info |
+| GET | `/api/v10/dispatcher/bookmark/info` | Get tags, bundles, and user preferences |
+| GET | `/api/v10/dispatcher/bookmark/job/status/{job_id}` | Get background job status |
+| POST | `/api/v10/dispatcher/bookmark/` | Save a new bookmark (async job) |
+| DELETE | `/api/v10/dispatcher/bookmark/{bookmark_id}` | Remove a bookmark (async job) |
 
 ## 📝 Contributing
 
