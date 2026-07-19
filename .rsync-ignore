@@ -1,0 +1,11 @@
+.git/
+.gitignore
+.DS_Store
+.env
+.venv
+node_modules/
+build
+__pycache__/
+*.log
+.tmp/
+docker-compose.yml

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="./images/favicon.ico" sizes="48x48">
+    <link rel="icon" href="./images/favicon.svg" sizes="any" type="image/svg+xml">
+    <link rel="apple-touch-icon" sizes="180x180" href="./images/apple-touch-icon.png">
+    <link rel="mask-icon" href="./images/safari-pinned-tab.svg" color="#5856e0">
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimal-ui">
+
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0">
+    <title>Bookmark</title>
+</head>
+
+<body>
+    <div class="section-header mt-3 container">
+        <div class="py-2 d-flex justify-content-between align-items-center">
+            <div>
+                <img class="app-logo" src="./images/logo.png" alt="Application logo">
+                <span class="app-name">LINKDING</span>
+            </div>
+            <h1 id="head-title-id">Bookmark</h1>
+        </div>
+        <hr class="border-secondary mb-2 mt-1">
+    </div>
+    <form id="dispatch-form" name="dispatch-form" class="container needs-validation" novalidate autocomplete="off">
+
+        <div class="form-group mt-1 autocomplete-wrapper">
+            <label for="tags-id">Tags</label>
+
+            <input type="text" class="form-control text-lowercase" id="tags-id" aria-describedby="url"
+                placeholder="food, music" autocomplete="off" autocapitalize="off">
+            <ul id="autocomplete-list" class="dropdown-menu"></ul>
+        </div>
+        <div class="form-group mt-1">
+            <label for="title-id">Title</label>
+            <input type="text" class="form-control" id="title-id" aria-describedby="url" placeholder="Enter title"
+                autocomplete="off" required>
+            <div class="invalid-feedback">Please provide a valid bookmark title.</div>
+        </div>
+        <div class="form-group">
+            <label for="url-id">Url</label>
+            <input type="url" class="form-control" id="url-id" aria-describedby="url" placeholder="Enter url"
+                autocomplete="off" required>
+            <div class="invalid-feedback">Please provide a valid URL.</div>
+        </div>
+
+
+        <details class="card mb-3 mt-4 overflow-hidden">
+            <summary class="card-header user-select-none">
+                <span id="dropdown-title">Bundles:</span>
+            </summary>
+
+            <div class="card-body overflow-auto list-group-scrollable-x-3 p-0">
+                <div id="bundle-id" class="list-group list-group-flush">
+                    <label class="list-group-item">
+                        <input class="form-check-input me-2" type="radio" name="bundle" checked>Select Bundle
+                    </label>
+                    <label class="list-group-item">
+                        <input class="form-check-input me-2" value="-1" type="radio" name="bundle">...
+                    </label>
+                    <label class="list-group-item">
+                        <input class="form-check-input me-2" value="-1" type="radio" name="bundle">...
+                    </label>
+                    <label class="list-group-item">
+                        <input class="form-check-input me-2" value="-1" type="radio" name="bundle">...
+                    </label>
+                    <label class="list-group-item">
+                        <input class="form-check-input me-2" value="-1" type="radio" name="bundle">...
+                    </label>
+                </div>
+            </div>
+        </details>
+
+        <details class="card mb-4 mt-4">
+            <summary class="card-header user-select-none">
+                <span>Additional Details:</span>
+            </summary>
+
+            <div class="card-body">
+                <fieldset class="form-group mt-0">
+                    <legend class="col-form-label pt-0">Options</legend>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="session-id">
+                        <label class="form-check-label" for="session-id">Remember my preference</label>
+                        <div class="form-text text-muted">Automatically saves all selection.</div>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="archived-id">
+                        <label class="form-check-label" for="archived-id">Mark as archived</label>
+                        <div class="form-text text-muted">Archived bookmarks are hidden from the main view.
+                        </div>
+                    </div>
+                </fieldset>
+
+                <div class="form-group mt-2">
+                    <label for="description-id">Description</label>
+                    <textarea class="form-control" id="description-id" rows="3" autocomplete="off"></textarea>
+                </div>
+            </div>
+        </details>
+        <div class="d-flex justify-content-between gap-3 mt-5">
+            <button id="submit-id" type="submit" class="btn btn-primary w-100" disabled>Save Bookmark</button>
+            <button id="remove-id" type="button" class="btn btn-danger w-50 d-none" disabled>Remove</button>
+        </div>
+    </form>
+
+    <div id="result-info" class="container d-none text-center mt-3">
+        <div class="form-group">
+            <h6>Bookmark is saved.</h6>
+            <div class="form-input-hint">You may close this page and check your Linkding app in a
+                moment.</div>
+            <div class="form-input-hint"></div>
+        </div>
+    </div>
+
+</body>
+
+</html>
