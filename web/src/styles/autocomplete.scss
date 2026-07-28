@@ -3,8 +3,24 @@
 }
 
 .autocomplete-wrapper>.dropdown-menu {
-    left: 0;
+    left: 2.6rem;
     right: 0;
-    max-height: 13rem;
+    max-height: 11rem;
     overflow-y: auto;
+    background: var(--bs-dropdown-bg);
+}
+
+// .dropdown-item.active,
+// .dropdown-item:active {
+//     background-color: #6260fd !important;
+// }
+
+/*
+Source - https://stackoverflow.com/a/55170420
+Posted by mayur patki, modified by community. See post 'Timeline' for change history
+Retrieved 2026-07-27, License - CC BY-SA 4.0
+*/
+input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none !important;
+    display: none;
 }

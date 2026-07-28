@@ -250,7 +250,7 @@ async function loadData() {
 }
 
 function toggleTagsSet(archived: boolean) {
-  const tags = new Set(!archived ? bookmarkInfo?.activeTags : bookmarkInfo?.allTags);
+  const tags = !archived ? bookmarkInfo?.activeTags : bookmarkInfo?.allTags;
   const title = bookmark ? 'Edit bookmark' : 'New bookmark';
 
   if (archived) {
@@ -261,7 +261,7 @@ function toggleTagsSet(archived: boolean) {
     userForm.headTitle.textContent = title;
   }
 
-  registerTagList(tags);
+  registerTagList(tags || []);
 }
 
 userForm.dropdown.addEventListener('change', (e: Event) => {
@@ -287,7 +287,7 @@ editForm.addEventListener('submit', async (e) => {
       url: userForm.url.value,
       title: userForm.title.value,
       bundle: data.get('bundle')?.toString() || '',
-      tags: userForm.tags.value.split(splitTagsRegex).filter((t) => t),
+      tags: [...new Set(userForm.tags.value.split(splitTagsRegex).filter((t) => t))],
       archived: userForm.archived.checked,
       description: userForm.description.value,
       remember: userForm.session.checked,

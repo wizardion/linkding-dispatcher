@@ -86,13 +86,13 @@ export interface Query {
   index: number;
   tags: Set<string>;
   list: string[];
-  // valid: boolean;
 }
 
 export interface Globals {
   selected: number;
   tags: Set<string>;
   spliter: RegExp;
+  ltrimmer: RegExp;
 }
 
 // Declare the global window variable you were using

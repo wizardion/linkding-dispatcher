@@ -24,8 +24,6 @@ async def process_bookmark_save(ctx: dict, token: str, payload: dict):
             bookark_service = BookmarkService(user)
             session_service = UserSessionService(user)
 
-            all_tags, active_tags = await bookark_service.get_tags()
-
             user_preference = UserPreference.model_validate(payload)
             bookmark = LinkdingBookmark.model_validate(payload)
 
@@ -34,21 +32,24 @@ async def process_bookmark_save(ctx: dict, token: str, payload: dict):
 
             bookmark = await linkding_service.save_bookmark(bookmark)
 
+            tags_result = await cache_manager.reset(f"tags:all:{user.id}")
+            all_tags, active_tags = await bookark_service.get_tags()
+
             if bookmark:
                 async with asyncio.TaskGroup() as tg:
                     preference_task = tg.create_task(
                         session_service.set(user_preference)
                     )
 
-                    tags_result = await cache_manager.set_binary(
-                        f"tags:all:{user.id}",
-                        adapter.dump_json(
-                            (
-                                list(set(all_tags + user_preference.tags)),
-                                active_tags,
-                            )
-                        ),
-                    )
+                    # tags_result = await cache_manager.set_binary(
+                    #     f"tags:all:{user.id}",
+                    #     adapter.dump_json(
+                    #         (
+                    #             list(set(all_tags + user_preference.tags)),
+                    #             active_tags,
+                    #         )
+                    #     ),
+                    # )
 
                 preference_result = preference_task.result()
 

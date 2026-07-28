@@ -58,8 +58,22 @@ class CacheManager:
 
         return False
 
-    async def reset(self):
-        """Flush the entire cache instantly."""
-        client = await self.connect()
-        logger.info("FLUSHING ENTIRE CACHE")
-        await client.flush_all(MemcachedHostAddress(self.host, self.port))
+    async def reset(self, key: str | None = None) -> bool:
+        """Flush the cache instantly."""
+        try:
+            client = await self.connect()
+
+            if key:
+                logger.info(f"FLUSHING CACHE: {key}")
+                await client.delete(key.encode("utf-8"))
+            else:
+                logger.info("FLUSHING ENTIRE CACHE")
+                await client.flush_all(MemcachedHostAddress(self.host, self.port))
+
+            return True
+        except StorageCommandError as ex:
+            logger.info(f"Cache storage error: {ex}")
+        except Exception as e:
+            logger.info(f"Unknown error occurend with cache: {e}")
+
+        return False
