@@ -206,13 +206,15 @@ async function loadData() {
   }
 
   if (bookmarkInfo) {
-    userForm.session.checked = bookmarkInfo.preference.remember;
-    userForm.archived.checked = bookmarkInfo.preference.archived;
-    userForm.tags.value = bookmarkInfo.preference.tags.join(', ');
-
     selectBundle(bookmarkInfo.preference.bundle);
     toggleTagsSet(bookmarkInfo.preference.archived);
     registerTagList(bookmarkInfo.tags || []);
+
+    if (bookmarkInfo.preference?.remember) {
+      userForm.session.checked = bookmarkInfo.preference.remember;
+      userForm.archived.checked = bookmarkInfo.preference.archived;
+      userForm.tags.value = bookmarkInfo.preference.tags.join(', ');
+    }
   }
 
   userForm.title.disabled = false;

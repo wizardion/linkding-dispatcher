@@ -28,13 +28,19 @@ async def _reset_tags(user: AuthUser, tags: list[str]):
     )
 
 
+async def _save_user_preference(user: AuthUser, user_preference: UserPreference):
+    if user_preference.remember:
+        session_service = UserSessionService(user)
+
+        await session_service.set(user_preference)
+
+
 async def process_bookmark_save(ctx: dict, token: str, payload: dict):
     try:
         user = await UserService.get_user(token)
 
         if user:
             linkding_service = LinkdingService(user.token, settings.linkding)
-            session_service = UserSessionService(user)
 
             user_preference = UserPreference.model_validate(payload)
             bookmark = LinkdingBookmark.model_validate(payload)
@@ -47,7 +53,7 @@ async def process_bookmark_save(ctx: dict, token: str, payload: dict):
             if bookmark:
                 async with asyncio.TaskGroup() as tg:
                     preference_task = tg.create_task(
-                        session_service.set(user_preference)
+                        _save_user_preference(user, user_preference)
                     )
 
                     tags_result = await _reset_tags(user, bookmark.tags)
