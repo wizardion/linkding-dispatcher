@@ -142,6 +142,8 @@ async function checkBookmark(
         userForm.submit.classList.add('w-75');
         userForm.headTitle.classList.add('text-success');
 
+        userForm.submit.innerText = 'Save Bookmark';
+
         return data.bookmark;
       }
 
@@ -206,23 +208,26 @@ async function loadData() {
   }
 
   if (bookmarkInfo) {
-    userForm.session.checked = bookmarkInfo.preference.remember;
-    userForm.archived.checked = bookmarkInfo.preference.archived;
-    userForm.tags.value = bookmarkInfo.preference.tags.join(', ');
-
     selectBundle(bookmarkInfo.preference.bundle);
     toggleTagsSet(bookmarkInfo.preference.archived);
+    registerTagList(bookmarkInfo.tags || []);
+
+    if (bookmarkInfo.preference?.remember) {
+      userForm.session.checked = bookmarkInfo.preference.remember;
+      userForm.archived.checked = bookmarkInfo.preference.archived;
+      userForm.tags.value = bookmarkInfo.preference.tags.join(', ');
+    }
   }
 
   userForm.title.disabled = false;
   userForm.tags.disabled = false;
   userForm.submit.disabled = false;
   userForm.remove.disabled = false;
+
   nextFrame().then(() => registerEventListeners());
 }
 
 function toggleTagsSet(archived: boolean) {
-  const tags = !archived ? bookmarkInfo?.activeTags : bookmarkInfo?.allTags;
   const title = bookmark ? 'Edit bookmark' : 'New bookmark';
 
   if (archived) {
@@ -232,8 +237,6 @@ function toggleTagsSet(archived: boolean) {
     userForm.headTitle.classList.remove('text-danger');
     userForm.headTitle.textContent = title;
   }
-
-  registerTagList(tags || []);
 }
 
 userForm.dropdown.addEventListener('change', (e: Event) => {
@@ -276,7 +279,7 @@ editForm.addEventListener('submit', async (e) => {
     userForm.remove.disabled = true;
 
     try {
-      await client.post<ApiJobDetails>(`${apiUrl}/bookmark/`, payload);
+      await client.post<ApiJobDetails>(`${apiUrl}/bookmark/save`, payload);
 
       editForm.classList.add('d-none');
       info.element.classList.remove('d-none');

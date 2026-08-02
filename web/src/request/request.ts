@@ -44,11 +44,11 @@ export class HttpClient {
   }
 
   public async post<T>(url: string, payload: object | null = null) {
-    return this.request<T>(url, 'POST');
+    return this.request<T>(url, 'POST', payload);
   }
 
   public async put<T>(url: string, payload: object | null = null) {
-    return this.request<T>(url, 'PUT');
+    return this.request<T>(url, 'PUT', payload);
   }
 
   public async delete<T>(url: string) {

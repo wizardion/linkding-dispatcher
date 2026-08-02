@@ -42,8 +42,7 @@ export interface ApiMetadataData {
 }
 
 export interface ApiInfoData {
-  allTags: string[];
-  activeTags: string[];
+  tags: string[];
   bundles: Bundle[];
   preference: UserPreference;
 }
