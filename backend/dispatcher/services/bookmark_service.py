@@ -46,8 +46,10 @@ class BookmarkService:
         variants = [url, url.rstrip("/") if url.endswith("/") else url + "/"]
 
         async with async_session_factory() as session:
-            query = select(LinkdingDBBookmark).where(
-                LinkdingDBBookmark.url.in_(variants)
+            query = (
+                select(LinkdingDBBookmark)
+                .filter(LinkdingDBBookmark.owner_id == self.user.id)
+                .where(LinkdingDBBookmark.url.in_(variants))
             )
             db_bookmark = await session.scalar(query)
 
@@ -101,36 +103,20 @@ class BookmarkService:
         lambda cls: f"tags:all:{attrgetter('user.id')(cls)}",
         CacheStrategy.ONE_WEEK,
     )
-    async def get_tags(self) -> tuple[list[str], list[str]]:
-        all_tags_query = (
-            select(LinkdingDBTag.name)
-            .filter(LinkdingDBTag.owner_id == self.user.id)
-            .order_by(LinkdingDBTag.name)
-        )
-        active_query = all_tags_query.where(
-            exists(
-                select(1)
-                .select_from(LinkdingDBBookmarkTag)
-                .join(
-                    LinkdingDBBookmark,
-                    LinkdingDBBookmark.id == LinkdingDBBookmarkTag.bookmark_id,
-                )
-                .filter(LinkdingDBBookmarkTag.tag_id == LinkdingDBTag.id)
-                .where(~LinkdingDBBookmark.is_archived)
-            )
-        )
+    async def get_tags(self) -> list[str]:
+        return await self.get_db_tags()
 
+    async def get_db_tags(self) -> list[str]:
         async with async_session_factory() as session:
-            bundle_list = await self._get_bundles_set(session)
-
-            all_tags_result = await session.execute(
-                all_tags_query.where(~LinkdingDBTag.name.in_(bundle_list))
+            bundles_set = await self._get_bundles_set(session)
+            all_tags_query = (
+                select(LinkdingDBTag.name)
+                .filter(LinkdingDBTag.owner_id == self.user.id)
+                .where(~LinkdingDBTag.name.in_(bundles_set))
+                .order_by(LinkdingDBTag.name)
             )
-            active_tags_result = await session.execute(
-                active_query.where(~LinkdingDBTag.name.in_(bundle_list))
-            )
 
-            all_tags = all_tags_result.scalars().all()
+            active_tags_result = await session.execute(all_tags_query)
             active_tags = active_tags_result.scalars().all()
 
-        return list(all_tags), list(active_tags)
+        return list(active_tags)

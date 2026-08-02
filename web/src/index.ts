@@ -212,17 +212,18 @@ async function loadData() {
 
     selectBundle(bookmarkInfo.preference.bundle);
     toggleTagsSet(bookmarkInfo.preference.archived);
+    registerTagList(bookmarkInfo.tags || []);
   }
 
   userForm.title.disabled = false;
   userForm.tags.disabled = false;
   userForm.submit.disabled = false;
   userForm.remove.disabled = false;
+
   nextFrame().then(() => registerEventListeners());
 }
 
 function toggleTagsSet(archived: boolean) {
-  const tags = !archived ? bookmarkInfo?.activeTags : bookmarkInfo?.allTags;
   const title = bookmark ? 'Edit bookmark' : 'New bookmark';
 
   if (archived) {
@@ -232,8 +233,6 @@ function toggleTagsSet(archived: boolean) {
     userForm.headTitle.classList.remove('text-danger');
     userForm.headTitle.textContent = title;
   }
-
-  registerTagList(tags || []);
 }
 
 userForm.dropdown.addEventListener('change', (e: Event) => {
@@ -276,7 +275,7 @@ editForm.addEventListener('submit', async (e) => {
     userForm.remove.disabled = true;
 
     try {
-      await client.post<ApiJobDetails>(`${apiUrl}/bookmark/`, payload);
+      await client.post<ApiJobDetails>(`${apiUrl}/bookmark/save`, payload);
 
       editForm.classList.add('d-none');
       info.element.classList.remove('d-none');

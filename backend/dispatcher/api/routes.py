@@ -61,12 +61,11 @@ async def get_info(
 
         user_preference = await session_service.get()
 
-    all_tags, active_tags = tags_task.result()
+    all_tags = tags_task.result()
     bundles = bundles_task.result()
 
     return {
-        "allTags": all_tags,
-        "activeTags": active_tags,
+        "tags": all_tags,
         "bundles": bundles,
         "preference": user_preference,
     }
@@ -95,7 +94,7 @@ async def get_job_status(request: Request, job_id: str):
     }
 
 
-@router.post("/", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/save", status_code=status.HTTP_202_ACCEPTED)
 async def save_bookmark(
     bookmark: BookmarkPayload,
     response: Response,
