@@ -142,6 +142,8 @@ async function checkBookmark(
         userForm.submit.classList.add('w-75');
         userForm.headTitle.classList.add('text-success');
 
+        userForm.submit.innerText = 'Save Bookmark';
+
         return data.bookmark;
       }
 
