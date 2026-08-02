@@ -30,10 +30,6 @@ export interface UserPreference {
   remember: boolean;
 }
 
-export interface ApiErrorData {
-  error: string;
-}
-
 export interface ApiCheckData {
   url: string;
   bookmark: Bookmark | null;
@@ -52,9 +48,34 @@ export interface ApiInfoData {
   preference: UserPreference;
 }
 
-export interface ApiSaveData {
-  status: string;
+/* 
+
+{
+   {
+    "id": "08d1d2a26dc243fba8668c591724ae3b",
+    "jobTry": 1,
+    "name": "process_bookmark:migrate",
+    "start": "2026-08-01T16:10:03.815000+00:00",
+    "finish": "2026-08-01T16:10:06.865000+00:00",
+    "enqueued": "2026-08-01T16:10:03.782000+00:00",
+    "success": false
+}
+}
+*/
+export interface ApiJobInfo {
+  id: string;
+  jobTry: number;
+  name: string;
+  start: string;
+  finish: string;
+  enqueued: string;
+  success: boolean;
+}
+
+export interface ApiJobDetails {
   jobId: string;
+  status: 'queued' | 'in_progress' | 'complete';
+  info?: ApiJobInfo;
 }
 
 export interface UserForm {

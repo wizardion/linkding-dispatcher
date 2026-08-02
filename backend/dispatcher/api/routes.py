@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 
 from dispatcher.core import settings
 from dispatcher.schemas.bookmark import BookmarkPayload
+from dispatcher.schemas.jobs import JobDetails
 from dispatcher.schemas.user import AuthUser
 from dispatcher.services import BookmarkService, LinkdingService, UserSessionService
 
@@ -75,12 +76,23 @@ async def get_info(
 async def get_job_status(request: Request, job_id: str):
     arq_pool: ArqRedis = request.app.state.arq_pool
     job = Job(job_id=job_id, redis=arq_pool)
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found or already purged.")
+
     status = await job.status()
 
     if not status:
-        raise HTTPException(status_code=404, detail="Job not found or already purged.")
+        raise HTTPException(status_code=404, detail="Status not found.")
 
-    return {"job_id": job_id, "status": status.value}
+    info = await job.result_info()
+    return {
+        "jobId": job.job_id,
+        "status": status.value,
+        "info": (
+            JobDetails.model_validate(info).model_dump(by_alias=True) if info else None
+        ),
+    }
 
 
 @router.post("/", status_code=status.HTTP_202_ACCEPTED)
@@ -117,6 +129,21 @@ async def remove_bookmark(
         return {"error": "Bookmark ID is required."}
 
     job = await arq_pool.enqueue_job("process_bookmark:remove", user.token, bookmark_id)
+
+    if not job:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"error": "Processing data is Unsuccessful."}
+
+    return {"status": "processing", "jobId": job.job_id}
+
+
+@router.post("/migrate", status_code=status.HTTP_202_ACCEPTED)
+async def migrate_bookmarks(
+    response: Response,
+    user: AuthUser = Depends(get_user),
+    arq_pool: ArqRedis = Depends(get_arq_pool),
+):
+    job = await arq_pool.enqueue_job("process_bookmark:migrate", user.token)
 
     if not job:
         response.status_code = status.HTTP_400_BAD_REQUEST

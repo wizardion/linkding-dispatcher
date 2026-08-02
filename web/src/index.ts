@@ -5,14 +5,15 @@ import {
   Bookmark,
   UserForm,
   ApiInfoData,
-  ApiSaveData,
+  ApiJobDetails,
   ResultInfo,
-  ApiErrorData,
   Payload,
   ApiMetadataData,
 } from './types/types';
 import { registerEventListeners, registerTagList } from './autocomplete/autocomplete';
-import { nextFrame, ApiError } from './core';
+import { nextFrame } from './core';
+import { HttpClient } from './request/request';
+import { ApiError } from './request/exceptions';
 
 const apiUrl = '/api/v10/dispatcher';
 const editForm = <HTMLFormElement>document.getElementById('dispatch-form');
@@ -51,43 +52,9 @@ function selectBundle(value: string) {
   }
 }
 
-async function request<T>(
-  url: string,
-  method: 'GET' | 'POST' | 'DELETE' = 'GET',
-  payload: object | null = null
-): Promise<T> {
-  const urlParams = new URLSearchParams(window.location.search);
-  const token = urlParams.get('token') || '';
-
-  const options: RequestInit = {
-    method: method,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': token,
-    },
-    body: payload ? JSON.stringify(payload) : null,
-  };
-
-  const response = await fetch(url, options);
-
-  if (!response.ok) {
-    let data: ApiErrorData;
-
-    try {
-      data = await response.json();
-    } catch {
-      data = { error: response.statusText };
-    }
-
-    throw new ApiError(response.status, data.error);
-  }
-
-  return response.json();
-}
-
-async function getPreference(): Promise<ApiInfoData | null> {
+async function getPreference(client: HttpClient): Promise<ApiInfoData | null> {
   try {
-    const data = await request<ApiInfoData>(`${apiUrl}/bookmark/info`);
+    const data = await client.get<ApiInfoData>(`${apiUrl}/bookmark/info`);
 
     if (data) {
       const radios = userForm.bundles;
@@ -146,13 +113,16 @@ async function getPreference(): Promise<ApiInfoData | null> {
   return null;
 }
 
-async function checkBookmark(url: string): Promise<Bookmark | null> {
+async function checkBookmark(
+  url: string,
+  client: HttpClient
+): Promise<Bookmark | null> {
   if (url) {
     userForm.url.value = url;
 
     try {
       const encodedUrl = encodeURIComponent(url);
-      const data = await request<ApiCheckData>(
+      const data = await client.get<ApiCheckData>(
         `${apiUrl}/bookmark/check?url=${encodedUrl}`
       );
 
@@ -189,11 +159,11 @@ async function checkBookmark(url: string): Promise<Bookmark | null> {
   return null;
 }
 
-async function checkBookmarkMetadata(url: string): Promise<void> {
+async function checkBookmarkMetadata(url: string, client: HttpClient): Promise<void> {
   if (url) {
     try {
       const encodedUrl = encodeURIComponent(url);
-      const data = await request<ApiMetadataData>(
+      const data = await client.get<ApiMetadataData>(
         `${apiUrl}/bookmark/metadata?url=${encodedUrl}`
       );
 
@@ -213,14 +183,16 @@ async function checkBookmarkMetadata(url: string): Promise<void> {
 
 async function loadData() {
   const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token') || '';
+  const client = new HttpClient(token);
   const url = urlParams.get('url') || '';
-  const result = await Promise.all([checkBookmark(url), getPreference()]);
+  const result = await Promise.all([checkBookmark(url, client), getPreference(client)]);
 
   bookmark = result[0];
   bookmarkInfo = result[1];
 
   if (!bookmark) {
-    checkBookmarkMetadata(url);
+    checkBookmarkMetadata(url, client);
   }
 
   if (bookmark && bookmarkInfo) {
@@ -277,10 +249,14 @@ userForm.archived.addEventListener('change', (event) =>
 );
 
 editForm.addEventListener('submit', async (e) => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token') || '';
+
   e.preventDefault();
   e.stopPropagation();
 
-  if (editForm.checkValidity()) {
+  if (editForm.checkValidity() && token) {
+    const client = new HttpClient(token);
     const data = new FormData(editForm);
     const payload: Payload = {
       id: bookmark?.id || null,
@@ -300,7 +276,7 @@ editForm.addEventListener('submit', async (e) => {
     userForm.remove.disabled = true;
 
     try {
-      await request<ApiSaveData>(`${apiUrl}/bookmark/`, 'POST', payload);
+      await client.post<ApiJobDetails>(`${apiUrl}/bookmark/`, payload);
 
       editForm.classList.add('d-none');
       info.element.classList.remove('d-none');
@@ -320,9 +296,13 @@ editForm.addEventListener('submit', async (e) => {
 });
 
 userForm.remove.addEventListener('click', async (e) => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token') || '';
+
   e.preventDefault();
 
-  if (bookmark) {
+  if (bookmark && token) {
+    const client = new HttpClient(token);
     const info: ResultInfo = {
       element: document.getElementById('result-info') as HTMLElement,
     };
@@ -331,9 +311,8 @@ userForm.remove.addEventListener('click', async (e) => {
     userForm.remove.disabled = true;
 
     try {
-      const data = await request<ApiSaveData>(
-        `${apiUrl}/bookmark/${bookmark.id}`,
-        'DELETE'
+      const data = await client.delete<ApiJobDetails>(
+        `${apiUrl}/bookmark/${bookmark.id}`
       );
 
       editForm.classList.add('d-none');
@@ -352,3 +331,45 @@ userForm.remove.addEventListener('click', async (e) => {
 });
 
 loadData();
+
+// async function migrate(button: HTMLInputElement) {
+//   const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+//   const urlParams = new URLSearchParams(window.location.search);
+//   const token = urlParams.get('token') || '';
+
+//   button.disabled = true;
+
+//   if (token) {
+//     const client = new HttpClient(token);
+
+//     try {
+//       let job = await client.post<ApiJobDetails>(`${apiUrl}/bookmark/migrate`);
+
+//       console.log('job', job);
+
+//       if (job?.status) {
+//         while (job.status !== 'complete') {
+//           await wait(2000);
+
+//           job = await client.get<ApiJobDetails>(
+//             `${apiUrl}/bookmark/job/status/${job.jobId}`
+//           );
+
+//           console.log('\tjob:check', job);
+//         }
+//       }
+
+//       if (!job.info?.success) {
+//         alert('The migration process finished unsuccessfully.');
+//       }
+//     } catch (error) {
+//       console.log('ERROR', error);
+//     }
+//   }
+
+//   button.disabled = false;
+// }
+
+// document
+//   .getElementById('migrate-id')
+//   ?.addEventListener('click', (e) => migrate(e.target as HTMLInputElement));
