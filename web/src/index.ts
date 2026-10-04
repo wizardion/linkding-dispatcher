@@ -379,8 +379,6 @@ userForm.reset.addEventListener('click', async (e) => {
     const client = new HttpClient(token);
     const span = userForm.reset.nextElementSibling as HTMLSpanElement;
 
-    console.log('span', [span]);
-
     userForm.reset.classList.add('d-none');
     span.classList.remove('d-none');
     userForm.submit.disabled = true;

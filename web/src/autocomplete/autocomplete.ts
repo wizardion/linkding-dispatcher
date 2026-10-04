@@ -12,7 +12,6 @@ const globals: Globals = {
 function removeTag(name: string) {
   const input = <HTMLInputElement>document.getElementById('tags-id');
 
-  console.log('remove', [name]);
   globals.tags.delete(name);
   renderAllTags();
 
@@ -92,7 +91,7 @@ function selectTag(tagName: string) {
 }
 
 function searchInQuery(query: string): MatchesResult {
-  if (query && globals.allTags.has(query)) {
+  if (!query || globals.allTags.has(query)) {
     return {
       isNew: false,
       matches: [],
