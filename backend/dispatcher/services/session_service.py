@@ -25,15 +25,15 @@ class UserSessionService:
 
         return UserPreference()
 
-    async def set(self, user_session: UserPreference) -> UserPreference | None:
+    async def set(self, user_session: UserPreference) -> bool:
         try:
             adapter = TypeAdapter(UserPreference)
             data = adapter.dump_json(user_session)
 
-            await cache_manager.set_binary(f"user-session:set:{self.user.id}", data)
-
-            return user_session
+            return await cache_manager.set_binary(
+                f"user-session:set:{self.user.id}", data
+            )
         except Exception as ex:
             logger.error(f"Error setting session. {ex}")
 
-        return None
+        return False

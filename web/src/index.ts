@@ -9,11 +9,19 @@ import {
   ResultInfo,
   Payload,
   ApiMetadataData,
+  ApiResetDetails,
 } from './types/types';
-import { registerEventListeners, registerTagList } from './autocomplete/autocomplete';
+import {
+  getSelectedTags,
+  registerEventListeners,
+  registerTags,
+  setInputTags,
+} from './autocomplete/autocomplete';
 import { nextFrame } from './core';
 import { HttpClient } from './request/request';
 import { ApiError } from './request/exceptions';
+
+// import './migration/migration';
 
 const apiUrl = '/api/v10/dispatcher';
 const editForm = <HTMLFormElement>document.getElementById('dispatch-form');
@@ -36,6 +44,7 @@ const userForm: UserForm = {
   description: document.getElementById('description-id') as HTMLTextAreaElement,
   submit: document.getElementById('submit-id') as HTMLButtonElement,
   remove: document.getElementById('remove-id') as HTMLButtonElement,
+  reset: document.getElementById('reset-cache-id') as HTMLLinkElement,
   headTitle: document.getElementById('head-title-id') as HTMLElement,
 };
 
@@ -131,7 +140,6 @@ async function checkBookmark(
       if (data.bookmark) {
         userForm.title.value = data.bookmark.title;
         userForm.description.value = data.bookmark.description;
-        userForm.tags.value = data.bookmark.tags.join('');
         userForm.archived.checked = data.bookmark.archived;
 
         userForm.headTitle.textContent = 'Edit bookmark';
@@ -143,6 +151,8 @@ async function checkBookmark(
         userForm.headTitle.classList.add('text-success');
 
         userForm.submit.innerText = 'Save Bookmark';
+
+        setInputTags(data.bookmark.tags || []);
 
         return data.bookmark;
       }
@@ -183,18 +193,24 @@ async function checkBookmarkMetadata(url: string, client: HttpClient): Promise<v
   }
 }
 
-async function loadData() {
+async function loadData(checkUrl?: string) {
   const urlParams = new URLSearchParams(window.location.search);
   const token = urlParams.get('token') || '';
+  const url = checkUrl || urlParams.get('url') || '';
+
+  if (!url) {
+    return;
+  }
+
   const client = new HttpClient(token);
-  const url = urlParams.get('url') || '';
-  const result = await Promise.all([checkBookmark(url, client), getPreference(client)]);
+  const requests: Promise<any>[] = [checkBookmark(url, client), getPreference(client)];
+  const result = await Promise.all(requests);
 
   bookmark = result[0];
   bookmarkInfo = result[1];
 
   if (!bookmark) {
-    checkBookmarkMetadata(url, client);
+    requests.push(checkBookmarkMetadata(url, client));
   }
 
   if (bookmark && bookmarkInfo) {
@@ -210,21 +226,28 @@ async function loadData() {
   if (bookmarkInfo) {
     selectBundle(bookmarkInfo.preference.bundle);
     toggleTagsSet(bookmarkInfo.preference.archived);
-    registerTagList(bookmarkInfo.tags || []);
+    registerTags(bookmarkInfo.tags || []);
+    setInputTags(bookmarkInfo.preference.tags || []);
 
     if (bookmarkInfo.preference?.remember) {
       userForm.session.checked = bookmarkInfo.preference.remember;
       userForm.archived.checked = bookmarkInfo.preference.archived;
-      userForm.tags.value = bookmarkInfo.preference.tags.join(', ');
     }
+
+    // if (!bookmarkInfo.bundles.length) {
+    //   userForm.dropdown.parentElement?.parentElement?.classList.add('d-none');
+    // }
   }
 
   userForm.title.disabled = false;
   userForm.tags.disabled = false;
-  userForm.submit.disabled = false;
-  userForm.remove.disabled = false;
 
   nextFrame().then(() => registerEventListeners());
+
+  await Promise.all(requests);
+
+  userForm.submit.disabled = false;
+  userForm.remove.disabled = false;
 }
 
 function toggleTagsSet(archived: boolean) {
@@ -238,6 +261,17 @@ function toggleTagsSet(archived: boolean) {
     userForm.headTitle.textContent = title;
   }
 }
+
+userForm.url.addEventListener('change', (e: Event) => {
+  const input = e.target as HTMLInputElement;
+
+  userForm.title.disabled = true;
+  userForm.tags.disabled = true;
+  userForm.submit.disabled = true;
+  userForm.remove.disabled = true;
+
+  loadData(input.value);
+});
 
 userForm.dropdown.addEventListener('change', (e: Event) => {
   const input = e.target as HTMLInputElement;
@@ -266,7 +300,7 @@ editForm.addEventListener('submit', async (e) => {
       url: userForm.url.value,
       title: userForm.title.value,
       bundle: data.get('bundle')?.toString() || '',
-      tags: [...new Set(userForm.tags.value.split(splitTagsRegex).filter((t) => t))],
+      tags: getSelectedTags(),
       archived: userForm.archived.checked,
       description: userForm.description.value,
       remember: userForm.session.checked,
@@ -328,6 +362,50 @@ userForm.remove.addEventListener('click', async (e) => {
       }
     }
 
+    userForm.submit.disabled = false;
+    userForm.remove.disabled = false;
+  }
+});
+
+userForm.reset.addEventListener('click', async (e) => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token') || '';
+
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  e.stopPropagation();
+
+  if (token) {
+    const client = new HttpClient(token);
+    const span = userForm.reset.nextElementSibling as HTMLSpanElement;
+
+    console.log('span', [span]);
+
+    userForm.reset.classList.add('d-none');
+    span.classList.remove('d-none');
+    userForm.submit.disabled = true;
+    userForm.remove.disabled = true;
+
+    await nextFrame();
+
+    try {
+      const data = await client.post<ApiResetDetails>(`${apiUrl}/bookmark/reset`);
+
+      if (!data.success) {
+        throw new ApiError(500, 'Resetting cache was unsuccessful.');
+      }
+
+      await loadData();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        console.log('ERROR:', [error.message]);
+      } else {
+        console.error('An unexpected error occurred');
+      }
+    }
+
+    userForm.reset.classList.remove('d-none');
+    span.classList.add('d-none');
     userForm.submit.disabled = false;
     userForm.remove.disabled = false;
   }

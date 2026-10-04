@@ -10,6 +10,7 @@ class LinkdingBookmark(BaseModel):
     tags: list[str] = Field(alias="tag_names")
     archived: bool = Field(default=False, alias="is_archived")
     description: str | None = None
+    preview_image_url: str | None = None
 
 
 class Bookmark(LinkdingBookmark):

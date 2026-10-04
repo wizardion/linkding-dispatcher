@@ -1,13 +1,70 @@
-import { Globals, Query } from '../types/types';
+import { Globals, MatchesResult, Positioning, Query, TagsQuery } from '../types/types';
 
-const tagsInput = <HTMLInputElement>document.getElementById('tags-id');
 const listElement = <HTMLDivElement>document.getElementById('autocomplete-list');
 const globals: Globals = {
   selected: 0,
+  allTags: new Set(),
   tags: new Set(),
   spliter: /[,\s]+/g,
   ltrimmer: /^[,\s]+/g,
 };
+
+function removeTag(name: string) {
+  const input = <HTMLInputElement>document.getElementById('tags-id');
+
+  console.log('remove', [name]);
+  globals.tags.delete(name);
+  renderAllTags();
+
+  input.value = '';
+}
+
+function renderTag(name: string, predicate: (e: Event) => void): HTMLDivElement {
+  const tag = document.createElement('div') as HTMLDivElement;
+  const span = document.createElement('span') as HTMLSpanElement;
+  const button = document.createElement('button') as HTMLButtonElement;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+
+  svg.setAttribute('class', 'bi bi-x');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  use.setAttribute('href', '#x-remove');
+  use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#x-remove');
+  svg.appendChild(use);
+
+  button.type = 'button';
+  button.classList.add('tag-delete');
+  button.setAttribute('aria-label', 'Remove ' + name);
+  button.appendChild(svg);
+
+  span.innerText = name;
+
+  tag.classList.add('tag', 'user-select-none');
+  tag.appendChild(span);
+  tag.appendChild(button);
+  tag.dataset.tag = name;
+
+  button.addEventListener('mousedown', (e) => e.preventDefault());
+  button.addEventListener('click', predicate);
+
+  return tag;
+}
+
+function renderAllTags() {
+  const input = document.getElementById('tags-id') as HTMLInputElement;
+
+  while (input.previousSibling) {
+    const node = input.previousSibling;
+
+    node.remove();
+  }
+
+  for (const name of globals.tags) {
+    const tag = renderTag(name, () => removeTag(name));
+
+    input.parentElement?.insertBefore(tag, input);
+  }
+}
 
 function toggleTagsVisibility(visible: boolean) {
   listElement.dataset.visible = String(visible);
@@ -21,8 +78,87 @@ function toggleTagsVisibility(visible: boolean) {
   globals.selected = 0;
 }
 
+function selectTag(tagName: string) {
+  const input = <HTMLInputElement>document.getElementById('tags-id');
+
+  globals.tags.add(tagName);
+  globals.allTags.add(tagName);
+
+  toggleTagsVisibility(false);
+  renderAllTags();
+
+  input.value = '';
+  input.focus();
+}
+
+function searchInQuery(query: string): MatchesResult {
+  if (query && globals.allTags.has(query)) {
+    return {
+      isNew: false,
+      matches: [],
+    };
+  }
+
+  const matches = !query
+    ? [...globals.allTags]
+    : [...globals.allTags].filter((i) => i.startsWith(query));
+
+  matches.sort((a, b) => {
+    const aStarts = a.startsWith(query);
+    const bStarts = b.startsWith(query);
+
+    if (aStarts && !bStarts) return -1;
+    if (!aStarts && bStarts) return 1;
+
+    return a.localeCompare(b);
+  });
+
+  const isNew = matches.length === 0;
+
+  return {
+    isNew: isNew,
+    matches: !isNew ? matches.filter((v) => !globals.tags.has(v)) : [query],
+  };
+}
+
+// ------------------------------------------------------------------------------------
+function showSuggestion(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const { isNew, matches } = searchInQuery(input.value.trim());
+
+  listElement.innerHTML = '';
+  listElement.scrollTop = 0;
+  globals.selected = 0;
+
+  for (let i = 0; i < matches.length; i++) {
+    const match = matches[i];
+    const item = document.createElement('li');
+    const input = document.createElement('input');
+
+    input.type = 'button';
+    input.className = 'dropdown-item pt-2 pb-2';
+    input.value = isNew ? `new: "${match}"` : match;
+    input.dataset.value = match;
+
+    input.addEventListener('click', (e) => {
+      e.preventDefault();
+      selectTag(match);
+    });
+
+    item.appendChild(input);
+    listElement.appendChild(item);
+  }
+
+  if (matches.length > 0) {
+    const item = listElement.children[globals.selected];
+
+    (item.firstChild as HTMLInputElement).classList.add('active');
+  }
+
+  toggleTagsVisibility(matches?.length > 0);
+}
+
 function onKeyPress(e: KeyboardEvent) {
-  const span = document.getElementById('test-id');
   const suggestionVisible = listElement.dataset.visible == 'true';
 
   if (suggestionVisible && ['ArrowDown', 'ArrowUp'].includes(e.code)) {
@@ -65,174 +201,62 @@ function onKeyPress(e: KeyboardEvent) {
 
   if (['Backspace', 'Delete'].includes(e.code)) {
     const input = e.target as HTMLInputElement;
-    const left = input.selectionStart || 0;
-    const right = input.selectionEnd || 0;
 
-    if (left != right || isCursorInsideWord(input.value, left)) {
-      return;
-    }
+    if (input.value.trim() === '') {
+      input.value = '';
 
-    const query = buildQuery(input.value, left);
-    let index = query.index;
-    let steps = 1;
+      if (input.previousSibling) {
+        const tag = (input.previousSibling as HTMLDivElement).dataset.tag;
 
-    if (query.index < query.list.length - 1 && !query.list[index]) {
-      index = query.index - 1;
-      steps = 2;
-    }
-
-    if (globals.tags.has(query.list[index])) {
-      query.list.splice(index, steps);
-
-      const caret = query.list
-        .slice(0, index)
-        .reduce((acc, v) => acc + v.length + 2, 0);
-
-      tagsInput.value = query.list.join(', ');
-      tagsInput.setSelectionRange(caret, caret);
-
-      e.preventDefault();
+        if (tag && globals.tags.delete(tag)) {
+          input.previousSibling.remove();
+        }
+      }
     }
   }
 }
 
-function selectTag(query: Query, tagName: string) {
-  if (listElement.dataset.visible == 'true') {
-    const words = query.list
-      .slice(0, query.index)
-      .concat(tagName, query.list.slice(query.index + 1))
-      .filter((v) => !!v);
+function removeAllTags(e: Event) {
+  const input = <HTMLInputElement>document.getElementById('tags-id');
 
-    const tags = [...new Set(words)];
-    const caret =
-      tags.slice(0, query.index).reduce((acc, v) => acc + v.length + 2, 0) +
-      tagName.length;
+  globals.tags.clear();
+  input.value = '';
+  renderAllTags();
 
-    tagsInput.value = tags.join(', ');
-    tagsInput.setSelectionRange(caret, caret);
-    globals.tags.add(tagName);
-
-    toggleTagsVisibility(false);
-  }
+  e.preventDefault();
 }
 
-function isCursorInsideWord(str: string, pos: number) {
-  const value = str + ' ';
-  const wordRegex = /\w/;
+// -----------------------------------------------------------------------------------
+export function setInputTags(tags: string[]) {
+  const input = <HTMLInputElement>document.getElementById('tags-id');
 
-  const charBefore = value.charAt(pos - 1);
-  const charAfter = value.charAt(pos);
+  globals.tags = new Set(
+    tags.filter((v) => globals.allTags.has(v)).map((v) => v.toLowerCase())
+  );
+  renderAllTags();
 
-  // The cursor is inside a word if the character before OR after it is a word character
-  return wordRegex.test(charBefore) && wordRegex.test(charAfter);
+  input.value = '';
 }
 
-function buildQuery(text: string, cursor: number): Query {
-  const input = text.toLowerCase();
-  const tags = new Set(input.split(globals.spliter));
-
-  const left = input
-    .substring(0, cursor)
-    .replace(globals.ltrimmer, '')
-    .split(globals.spliter);
-  const right = input
-    .substring(cursor)
-    .replace(globals.ltrimmer, '')
-    .split(globals.spliter)
-    .filter((v) => !!v);
-
-  const index = left.length - 1;
-  let value = left[index] || '';
-
-  if (left[left.length - 1] && right[0] && tags.has(left[left.length - 1] + right[0])) {
-    value = left[left.length - 1] + right[0];
-    right[0] = value;
-  }
-
-  if (right[0] && right[0].startsWith(input[cursor])) {
-    value = right[0];
-  }
-
-  return {
-    value: value,
-    index: index,
-    tags: tags,
-    list: left.concat(right),
-  };
+export function registerTags(allTags: string[]) {
+  globals.allTags = new Set(allTags.map((i) => i.toLowerCase()));
 }
 
-function searchQuery(value: string, inputTags: Set<string>): string[] {
-  if (value && globals.tags.has(value)) {
-    return [];
-  }
-
-  const matches = !value
-    ? [...globals.tags]
-    : [...globals.tags].filter((i) => i.startsWith(value));
-
-  matches.sort((a, b) => {
-    const aStarts = a.startsWith(value);
-    const bStarts = b.startsWith(value);
-
-    if (aStarts && !bStarts) return -1;
-    if (!aStarts && bStarts) return 1;
-
-    return a.localeCompare(b);
-  });
-
-  return matches.length ? matches.filter((v) => !inputTags.has(v)) : [value];
-}
-
-function suggestTags(e: Event) {
-  const input = e.target as HTMLInputElement;
-
-  if (input.selectionStart === input.selectionEnd) {
-    const query = buildQuery(input.value, input.selectionStart || 0);
-    const matches = searchQuery(query.value, query.tags);
-
-    listElement.innerHTML = '';
-    listElement.scrollTop = 0;
-    globals.selected = 0;
-
-    for (let i = 0; i < matches.length; i++) {
-      const match = matches[i];
-      const item = document.createElement('li');
-      const input = document.createElement('input');
-
-      input.type = 'button';
-      input.className = 'dropdown-item pt-2 pb-2';
-      input.value = match;
-
-      input.addEventListener('click', () => selectTag(query, match));
-
-      item.appendChild(input);
-      listElement.appendChild(item);
-    }
-
-    if (matches.length > 0) {
-      const item = listElement.children[globals.selected];
-
-      (item.firstChild as HTMLInputElement).classList.add('active');
-    }
-
-    toggleTagsVisibility(matches?.length > 0);
-  } else {
-    toggleTagsVisibility(false);
-  }
-}
-
-export function registerTagList(tags: string[]) {
-  const existingTags = tagsInput.value
-    .split(globals.spliter)
-    .filter((v) => v)
-    .map((v) => v.toLowerCase());
-
-  globals.tags = new Set(existingTags.concat(tags.map((i) => i.toLowerCase())));
+export function getSelectedTags(): string[] {
+  return [...globals.tags];
 }
 
 export function registerEventListeners() {
-  tagsInput.addEventListener('keydown', onKeyPress);
-  tagsInput.addEventListener('blur', (e) => toggleTagsVisibility(false));
-  tagsInput.addEventListener('selectionchange', suggestTags);
+  const input = <HTMLInputElement>document.getElementById('tags-id');
+  const remove = <HTMLInputElement>document.getElementById('tags-remove-all');
+
+  input.addEventListener('keydown', onKeyPress);
+  input.addEventListener('blur', (e) => toggleTagsVisibility(false));
   listElement.addEventListener('mousedown', (e) => e.preventDefault());
+
+  input.addEventListener('focus', (e) => setTimeout(() => showSuggestion(e), 1));
+  input.addEventListener('input', showSuggestion);
+  input.addEventListener('mousedown', showSuggestion);
+  remove.addEventListener('mousedown', (e) => e.preventDefault());
+  remove.addEventListener('click', removeAllTags);
 }

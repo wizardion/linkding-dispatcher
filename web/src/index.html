@@ -15,6 +15,13 @@
 </head>
 
 <body>
+    <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor">
+        <symbol id="x-remove" viewBox="0 0 16 16">
+            <path
+                d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708" />
+        </symbol>
+    </svg>
     <div class="section-header mt-3 container">
         <div class="py-2 d-flex justify-content-between align-items-center">
             <div>
@@ -36,8 +43,17 @@
                             d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
                     </svg>
                 </span>
-                <input type="search" class="form-control text-lowercase" id="tags-id" aria-label="Search"
-                    aria-describedby="search-addon" autocomplete="off" autocapitalize="off">
+                <div class="form-control tags">
+                    <input type="search" class="tags-control text-lowercase" id="tags-id" aria-label="Search"
+                        aria-describedby="search-addon" autocomplete="off" autocapitalize="off">
+                    <div id="tags-remove-all" class="d-flex align-items-center">
+                        <button type="button" class="tag-delete" aria-label="Remove Angular">
+                            <svg class="bi bi-x" viewBox="0 0 24 24">
+                                <use href="#x-remove" xlink:href="#x-remove"></use>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
             </div>
             <ul id="autocomplete-list" class="dropdown-menu"></ul>
         </div>
@@ -108,13 +124,21 @@
                     <label for="description-id">Description</label>
                     <textarea class="form-control" id="description-id" rows="3" autocomplete="off"></textarea>
                 </div>
+
+                <div class="form-group mt-2">
+                    <label for="description-id">Cache</label>
+                    <a id="reset-cache-id" href="#">Reset</a>
+                    <span class="d-none text-decoration-underline">Reset</span>
+                </div>
             </div>
         </details>
         <div class="d-flex justify-content-between gap-3 mt-5">
-            <button id="submit-id" type="submit" class="btn btn-primary w-100" disabled>Add Bookmark</button>
-            <button id="remove-id" type="button" class="btn btn-danger d-none" disabled>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3"
-                    viewBox="0 0 16 16">
+            <button id="submit-id" type="submit" class="btn btn-primary w-100 user-select-none" disabled>Add
+                Bookmark</button>
+            <button id="migrate-id" type="submit" class="btn btn-danger w-100 d-none user-select-none">Update
+                images</button>
+            <button id="remove-id" type="button" class="btn btn-danger d-none user-select-none" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill=" currentColor" viewBox="0 0 16 16">
                     <path
                         d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5" />
                 </svg>

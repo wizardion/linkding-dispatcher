@@ -4,9 +4,9 @@
 # `./deploy.sh -n`
 
 # ==================== SERVER CONFIGURATION ====================
-USER="xxx"                        # Replace with your server's User name
-SERVER="192.168.x.x"              # Replace with your server's IP or domain
-TARGET_DIR="/xxx/xxx/xxxx/xxxx"   # Parent directory where apps live on Ubuntu
+USER="alex"                        # Replace with your server's User name
+SERVER="192.168.86.200"              # Replace with your server's IP or domain
+TARGET_DIR="/home/alex/apps/linkding"   # Parent directory where apps live on Ubuntu
 # ==============================================================
 
 # Ensure the ignore file exists
@@ -72,10 +72,12 @@ if [ "$RSYNC_SUCCESS" = true ]; then
     echo ""
     echo "1. Stopping services ..."
     echo ""
-    ssh "$USER@$SERVER" "cd '$TARGET_DIR' && docker compose down -v"
+    sleep 1s
+    ssh "$USER@$SERVER" "cd '$TARGET_DIR' && docker compose down"
     echo ""
     echo "2. Starting services ..."
     echo ""
+    sleep 2s
     ssh "$USER@$SERVER" "cd '$TARGET_DIR' && docker compose up -d --build"
     echo "----------------------------------------------------------------------------"
     echo ""

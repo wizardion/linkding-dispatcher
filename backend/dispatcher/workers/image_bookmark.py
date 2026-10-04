@@ -1,68 +1,50 @@
 import hashlib
 import io
 import logging
-import mimetypes
 import os
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
+import cloudscraper
 import httpx
 from bs4 import BeautifulSoup
-from httpx import Response
+from cloudscraper import CloudScraper
 from PIL import Image
+from requests import RequestException, Response
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dispatcher.db import async_session_factory
-from dispatcher.db.models import LinkdingDBApiToken, LinkdingDBBookmark, LinkdingDBUser
+from dispatcher.db.models import LinkdingDBBookmark
+from dispatcher.services.user_service import UserService
 
 logger = logging.getLogger(__name__)
-
-BATCH_SIZE = 20000
-PREVIEW_DIR = Path(os.environ["LINKDING_PREVIEW_DIR"]).resolve()
+logging.basicConfig(level=logging.INFO)
 
 
-async def _get_users(session: AsyncSession) -> list[LinkdingDBUser]:
-    query = select(LinkdingDBUser).join(
-        LinkdingDBApiToken, LinkdingDBApiToken.user_id == LinkdingDBUser.id
-    )
-
-    db_bookmark_result = await session.execute(query)
-    db_bookmarks = db_bookmark_result.scalars().all()
-
-    return list(db_bookmarks)
+PREVIEW_DIR = Path(
+    os.getenv("LINKDING_PREVIEW_DIR", "/tmp/linkding-favicons")
+).resolve()
 
 
-async def _get_bookmarks(
-    session: AsyncSession, user_id: int
-) -> list[LinkdingDBBookmark]:
+async def _get_bookmark(
+    session: AsyncSession, user_id: int, bookmark_id: int
+) -> LinkdingDBBookmark | None:
     query = (
         select(LinkdingDBBookmark)
         .filter(LinkdingDBBookmark.owner_id == user_id)
-        .filter(LinkdingDBBookmark.preview_image_file == "")
-        .limit(BATCH_SIZE)
+        .filter(LinkdingDBBookmark.id == bookmark_id)
     )
 
     db_bookmark_result = await session.execute(query)
-    db_bookmarks = db_bookmark_result.scalars().all()
+    db_bookmark = db_bookmark_result.scalar()
 
-    return list(db_bookmarks)
+    return db_bookmark
 
 
 def _build_preview_filename(img_url: str, content_type: str | None = None) -> str:
     digest = hashlib.md5(img_url.encode("utf-8")).hexdigest()
-
-    if content_type:
-        extension = mimetypes.guess_extension(content_type.split(";")[0])
-        if extension:
-            return f"{digest}{extension}"
-
-    parsed_url = urlparse(img_url)
-    extension = Path(parsed_url.path).suffix.lower()
-    if extension:
-        return f"{digest}{extension}"
-
-    return f"{digest}.bin"
+    return f"{digest}.png"
 
 
 def _save_image_to_bytes(img: Image.Image) -> bytes:
@@ -164,10 +146,19 @@ async def _save_bookmark_preview(
         )
         await session.commit()
 
-        return str(preview_path)
+        print(f"->bookmark.id: {bookmark.id}:{filename}")
+
+        return filename
 
 
-def _get_headers():
+def _get_headers(url: str) -> dict[str, str]:
+    parsed_url = urlparse(url)
+    origin = (
+        f"{parsed_url.scheme}://{parsed_url.netloc}"
+        if parsed_url.scheme and parsed_url.netloc
+        else ""
+    )
+
     return {
         "User-Agent": (
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -176,16 +167,22 @@ def _get_headers():
         ),
         "Accept": (
             "text/html,application/xhtml+xml,application/xml;q=0.9,"
-            "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+            "image/avif,image/webp,image/apng,image/svg+xml,*/*;q=0.8"
         ),
         "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
+        "Accept-Encoding": "gzip, deflate, br, zstd",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
         "Upgrade-Insecure-Requests": "1",
-        "Sec-Fetch-Site": "none",
+        "DNT": "1",
+        "Connection": "keep-alive",
+        "Referer": origin,
+        "Sec-Fetch-Site": "cross-site" if parsed_url.netloc else "same-origin",
         "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-User": "?1",
         "Sec-Fetch-Dest": "document",
+        "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not.A/Brand";v="99"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"macOS"',
     }
 
 
@@ -268,58 +265,65 @@ def _get_html(response: Response) -> str:
 
             # if content_encoding == "br":
             logger.warning(response.content[:150])
-            logger.warning("-----------------")
+            logger.warning("----------------")
 
     return html
 
 
-async def _process_bookmark_image(session: AsyncSession, bookmark: LinkdingDBBookmark):
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        headers = _get_headers()
-        response = await client.get(
-            bookmark.url, follow_redirects=True, headers=headers
+async def _process_bookmark_image(
+    session: AsyncSession, scraper: CloudScraper, bookmark: LinkdingDBBookmark
+):
+    headers = _get_headers(bookmark.url)
+    response = scraper.get(bookmark.url, headers=headers, allow_redirects=True)
+
+    response.raise_for_status()
+
+    html = _get_html(response)
+    img_url = _get_img_url(str(response.url), html)
+    headers.update({"Referer": bookmark.url})
+
+    print(f"img_url: {img_url}")
+
+    if img_url:
+        saved_filename = await _save_bookmark_preview(
+            session,
+            bookmark,
+            img_url,
+            headers,
         )
-
-        if response.is_success:
-            html = _get_html(response)
-            img_url = _get_img_url(str(response.url), html)
-            headers.update({"Referer": bookmark.url})
-
-            if img_url:
-                saved_filename = await _save_bookmark_preview(
-                    session,
-                    bookmark,
-                    img_url,
-                    headers,
-                )
-                logger.info(f"Bookmark image updated: {saved_filename}")
-            # else:
-            #     logger.warning(f"No image URL found for {response.url}")
-        else:
-            logger.warning(
-                f"Bookmark ({bookmark.id}) is broken: {response.status_code}"
-            )
+        logger.info(f"Bookmark image updated: {saved_filename}")
+    else:
+        logger.warning(f"No image URL found for {response.url}")
 
 
-async def process_all_bookmark_image(ctx: dict) -> bool:
-    logger.warning("Started Indexing Images")
-    logger.warning(f"PREVIEW_DIR:{PREVIEW_DIR}")
+async def process_bookmark_image(ctx: dict, token: str, bookmark_id: int) -> bool:
+    print("--- process_bookmark_image ---")
+    print(f"token: {token}")
+    print(f"bookmark_id: {bookmark_id}")
+    print("")
+
+    user = await UserService.get_user(token)
+
+    if not user:
+        logger.warning("User not found")
+        return False
 
     async with async_session_factory() as session:
-        users = await _get_users(session)
+        scraper = cloudscraper.create_scraper()
+        bookmark = await _get_bookmark(session, user.id, bookmark_id)
 
-        for user in users:
-            bookmarks = await _get_bookmarks(session, user.id)
-            logger.info(f"Found broken bookmarks: {len(bookmarks)}")
+        if bookmark and not bookmark.preview_image_file:
+            try:
+                await _process_bookmark_image(session, scraper, bookmark)
+            except (httpx.HTTPError, RequestException) as exc:
+                logger.warning(
+                    f"Failed fetching bookmark Info {bookmark.id}:{bookmark.url}\n{exc}"
+                )
+            except Exception as ex:
+                logger.warning(f"Failed updating bookmark: {bookmark.id}:\n{ex}")
+        elif bookmark:
+            logger.info(f"Bookmark already has an image: {bookmark.preview_image_file}")
 
-            for bookmark in bookmarks:
-                try:
-                    await _process_bookmark_image(session, bookmark)
-                except httpx.HTTPError as exc:
-                    logger.warning(
-                        "Failed fetching bookmark Info %s: %s", bookmark.url, exc
-                    )
-                except Exception as ex:
-                    logger.warning("Failed updating bookmark: %s: %s", bookmark.id, ex)
+    print("")
 
     return True

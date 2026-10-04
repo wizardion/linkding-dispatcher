@@ -24,3 +24,69 @@ input[type="search"]::-webkit-search-cancel-button {
     -webkit-appearance: none !important;
     display: none;
 }
+
+.tags {
+    // flex-wrap: wrap;
+    display: flex !important;
+    position: relative;
+    flex: auto;
+    gap: 0.4rem;
+    padding: 0.25rem 2.2rem 0.25rem 0.45rem !important;
+    flex-wrap: wrap;
+}
+
+#tags-remove-all {
+    position: absolute;
+    top: 50%;
+    right: 0.45rem;
+    transform: translateY(-50%);
+}
+
+.tag {
+    background: var(--bs-tertiary-bg);
+    border: var(--bs-border-width) solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius) !important;
+    display: flex;
+    align-items: center;
+    padding: 0rem 0.5rem;
+    box-sizing: border-box;
+    text-transform: capitalize;
+}
+
+.tag>span {
+    padding: 1px;
+}
+
+.tag-delete {
+    box-sizing: content-box;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    padding: 0;
+}
+
+.tag-delete svg {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+    fill: var(--bs-secondary-color);
+}
+
+.tags-control {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: inherit;
+    -webkit-text-fill-color: currentColor;
+    opacity: 1;
+    flex: 1 1 2rem;
+    outline: none;
+    height: 1.75rem;
+    width: 0;
+    min-width: 2rem;
+}

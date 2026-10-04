@@ -4,7 +4,7 @@ from arq import ArqRedis
 from arq.jobs import Job
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
-from dispatcher.core import settings
+from dispatcher.core import cache_manager, settings
 from dispatcher.schemas.bookmark import BookmarkPayload
 from dispatcher.schemas.jobs import JobDetails
 from dispatcher.schemas.user import AuthUser
@@ -136,13 +136,19 @@ async def remove_bookmark(
     return {"status": "processing", "jobId": job.job_id}
 
 
-@router.post("/migrate", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/reset", status_code=status.HTTP_202_ACCEPTED)
+async def reset_cache():
+    status = await cache_manager.reset()
+
+    return {"success": status}
+
+
+@router.post("/image", status_code=status.HTTP_202_ACCEPTED)
 async def migrate_bookmarks(
     response: Response,
-    user: AuthUser = Depends(get_user),
     arq_pool: ArqRedis = Depends(get_arq_pool),
 ):
-    job = await arq_pool.enqueue_job("process_bookmark:migrate", user.token)
+    job = await arq_pool.enqueue_job("process_bookmark:images")
 
     if not job:
         response.status_code = status.HTTP_400_BAD_REQUEST

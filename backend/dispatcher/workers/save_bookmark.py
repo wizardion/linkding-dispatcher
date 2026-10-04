@@ -1,6 +1,8 @@
 import asyncio
 import logging
+from datetime import timedelta
 
+from arq import ArqRedis
 from pydantic import TypeAdapter
 
 from dispatcher.core import cache_manager, settings
@@ -15,24 +17,28 @@ from dispatcher.services.user_service import UserService
 logger = logging.getLogger(__name__)
 
 
-async def _reset_tags(user: AuthUser, tags: list[str]):
+async def _reset_tags(user: AuthUser, tags: list[str]) -> bool:
     adapter = TypeAdapter(list[str])
     bookark_service = BookmarkService(user)
 
     all_tags = await bookark_service.get_db_tags()
     bundles_set = await bookark_service.get_bundles_set()
 
-    await cache_manager.set_binary(
+    return await cache_manager.set_binary(
         f"tags:all:{user.id}",
         adapter.dump_json(list(set(all_tags + tags) - bundles_set)),
     )
 
 
-async def _save_user_preference(user: AuthUser, user_preference: UserPreference):
+async def _save_user_preference(
+    user: AuthUser, user_preference: UserPreference
+) -> bool:
     if user_preference.remember:
         session_service = UserSessionService(user)
 
-        await session_service.set(user_preference)
+        return await session_service.set(user_preference)
+
+    return True
 
 
 async def process_bookmark_save(ctx: dict, token: str, payload: dict):
@@ -65,6 +71,16 @@ async def process_bookmark_save(ctx: dict, token: str, payload: dict):
 
                 if not tags_result:
                     logger.warning("Tags selection is not saved in cache.")
+
+                if not bookmark.preview_image_url or True:
+                    redis: ArqRedis = ctx["redis"]
+
+                    await redis.enqueue_job(
+                        "process_bookmark:image",
+                        user.token,
+                        bookmark.id,
+                        _defer_by=timedelta(minutes=1),
+                    )
             else:
                 logger.warning("Bookmark is not saved.")
         else:

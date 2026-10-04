@@ -39,6 +39,8 @@ class LinkdingDBBookmark(Base):
     website_description: Mapped[str | None] = mapped_column(Text)
     is_archived: Mapped[bool] = mapped_column(Boolean, nullable=False)
     url_normalized: Mapped[str] = mapped_column(String(2048), nullable=False)
+    favicon_file: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    preview_image_file: Mapped[str | None] = mapped_column(String(512), nullable=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey("auth_user.id"))
 
 

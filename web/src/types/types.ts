@@ -77,6 +77,10 @@ export interface ApiJobDetails {
   info?: ApiJobInfo;
 }
 
+export interface ApiResetDetails {
+  success: boolean;
+}
+
 export interface UserForm {
   url: HTMLInputElement;
   title: HTMLInputElement;
@@ -89,6 +93,7 @@ export interface UserForm {
   description: HTMLTextAreaElement;
   submit: HTMLButtonElement;
   remove: HTMLButtonElement;
+  reset: HTMLLinkElement;
   headTitle: HTMLElement;
   devOptions?: {
     headTitle: HTMLElement;
@@ -102,17 +107,42 @@ export interface ResultInfo {
 }
 
 export interface Query {
-  value: string;
   index: number;
-  tags: Set<string>;
+  lookup: string;
   list: string[];
+  tagged: Set<string>;
+}
+
+export enum Positioning {
+  Start = 1,
+  Middle = 2,
+  End = 3,
+}
+
+export interface TagsQueryMetrics {
+  position: Positioning;
+  index: number;
+}
+
+export interface TagsQuery {
+  value: string;
+  tags: Set<string>;
+  words: string[];
+  index: number;
+  metrics: TagsQueryMetrics;
 }
 
 export interface Globals {
   selected: number;
+  allTags: Set<string>;
   tags: Set<string>;
   spliter: RegExp;
   ltrimmer: RegExp;
+}
+
+export interface MatchesResult {
+  matches: string[];
+  isNew: boolean;
 }
 
 // Declare the global window variable you were using

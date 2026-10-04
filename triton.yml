@@ -1,0 +1,142 @@
+# Docker Compose configuration for Grammared Language
+# This is a placeholder/template for orchestrating the services
+
+services:
+  # Triton Inference Server
+  triton-server:
+    #    build:
+    #      context: .
+    #      dockerfile: docker/triton/Dockerfile
+    image: rayliuca/grammared-language-triton:latest
+    container_name: grammared-triton
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - MODEL_REPOSITORY=/models
+      - LOG_VERBOSE=0
+      - TRANSFORMERS_CACHE=/cache
+      - HF_HOME=/cache
+    ports:
+      # - "8000:8000"  # HTTP
+      # - "8001:8001"  # gRPC
+      # - "8002:8002"  # Metrics
+      - "8020:8000" # Maps host port 8080 to container HTTP port 8000
+      - "8022:8001" # Maps host port 8082 to container gRPC port 8001
+      - "8023:8002" # Maps host port 8083 to container Metrics port 8002
+    volumes:
+      - ./config/triton:/config:ro
+      - triton-cache:/cache # HuggingFace model cache
+      - ./hf_token:/cache/token # HuggingFace token for private models
+      - ./model_config.yaml:/model_config.yaml:ro # Model configuration
+      # - ./triton_server/example_model_repository:/models:ro  # Example models
+    # shm_size: '1gb'
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8020/v2/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - grammared-network
+    restart: unless-stopped
+
+  # API Service
+  api-service:
+    #    build:
+    #      context: .
+    #      dockerfile: docker/api/Dockerfile
+    image: rayliuca/grammared-language-api:latest
+    container_name: grammared-api
+    ports:
+      - "50051:50051"
+      - "50052:50052"
+    volumes:
+      - ./logs:/app/logs
+      - ./model_config.yaml:/model_config.yaml:ro # Model configuration
+      - ./data:/data
+      # - triton-cache:/cache  # HuggingFace model cache
+      - ./hf_token:/cache/token # HuggingFace token for private models
+    environment:
+      # - GRRAMMARED_LANGUAGE__API_PORT=50051
+      - LOG_LEVEL=INFO
+      - GRAMMARED_LANGUAGE__MODEL_CONFIG_PATH=/model_config.yaml
+      # - TRANSFORMERS_CACHE=/cache
+      # - HF_HOME=/cache
+      - GRAMMARED_LANGUAGE__TRITON_URL=grammared-triton:8001
+    depends_on:
+      triton-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:50052/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - grammared-network
+    restart: unless-stopped
+
+  languagetool:
+    image: meyay/languagetool:latest
+    container_name: languagetool
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:exec
+    cap_drop:
+      - ALL
+    cap_add:
+      - CAP_CHOWN
+      - CAP_DAC_OVERRIDE
+      - CAP_SETUID
+      - CAP_SETGID
+    security_opt:
+      - no-new-privileges
+    ports:
+      - 8010:8081
+    environment:
+      MAP_UID: 1000
+      MAP_GID: 1000
+      langtool_remoteRulesFile: ./remote-rule-config.json
+      environment:
+      langtool_languageModel: ./ngrams # OPTIONAL: Using ngrams data
+      Java_Xms: 1g # OPTIONAL: Setting a minimal Java heap size of 512 mib
+      Java_Xmx: 4g # OPTIONAL: Setting a maximum Java heap size of 1 Gib
+      download_ngrams_for_langs: en,ru
+    volumes:
+      - ./ngrams:/ngrams
+      - fasttext:/fasttext
+      - ./example_language_tool_configs/remote-rule-config.json:/remote-rule-config.json:ro
+    networks:
+      - grammared-network
+
+  restarter:
+    image: docker:cli
+    volumes: ["/var/run/docker.sock:/var/run/docker.sock"]
+    # restart languagetool every 12 hours to prevent memory leaks
+    command:
+      [
+        "/bin/sh",
+        "-c",
+        "while true; do sleep 43200; docker restart languagetool; done",
+      ]
+    restart: unless-stopped
+
+networks:
+  grammared-network:
+    # driver: bridge
+
+# Volumes for persistent data
+volumes:
+  triton-cache:
+    driver: local
+  fasttext:
+    driver: local

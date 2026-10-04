@@ -17,3 +17,4 @@ __pycache__/
 .tmp
 deploy.sh
 queries.sql
+linkding-data/
