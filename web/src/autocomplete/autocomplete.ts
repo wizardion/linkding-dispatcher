@@ -99,7 +99,7 @@ function selectTag(tagName: string) {
 }
 
 function searchInQuery(query: string): MatchesResult {
-  if (!query || globals.allTags.has(query)) {
+  if (!query || globals.tags.has(query)) {
     return {
       isNew: false,
       matches: [],
