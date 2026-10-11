@@ -16,6 +16,7 @@ function removeTag(name: string) {
   renderAllTags();
 
   input.value = '';
+  toggleClearVisibility(input.value.length > 0);
 }
 
 function renderTag(name: string, predicate: (e: Event) => void): HTMLDivElement {
@@ -65,6 +66,11 @@ function renderAllTags() {
   }
 }
 
+function toggleClearVisibility(visible: boolean) {
+  const input = <HTMLInputElement>document.getElementById('tags-remove-all');
+  input.style.visibility = visible ? 'visible' : 'hidden';
+}
+
 function toggleTagsVisibility(visible: boolean) {
   listElement.dataset.visible = String(visible);
 
@@ -88,6 +94,8 @@ function selectTag(tagName: string) {
 
   input.value = '';
   input.focus();
+
+  toggleClearVisibility(input.value.length > 0);
 }
 
 function searchInQuery(query: string): MatchesResult {
@@ -155,6 +163,7 @@ function showSuggestion(e: Event) {
   }
 
   toggleTagsVisibility(matches?.length > 0);
+  toggleClearVisibility(input.value.length > 0);
 }
 
 function onKeyPress(e: KeyboardEvent) {
@@ -211,6 +220,8 @@ function onKeyPress(e: KeyboardEvent) {
           input.previousSibling.remove();
         }
       }
+
+      toggleClearVisibility(input.value.length > 0);
     }
   }
 }
@@ -223,6 +234,10 @@ function removeAllTags(e: Event) {
   renderAllTags();
 
   e.preventDefault();
+
+  input.focus();
+
+  toggleClearVisibility(input.value.length > 0);
 }
 
 // -----------------------------------------------------------------------------------
@@ -235,6 +250,7 @@ export function setInputTags(tags: string[]) {
   renderAllTags();
 
   input.value = '';
+  toggleClearVisibility(input.value.length > 0);
 }
 
 export function registerTags(allTags: string[]) {
