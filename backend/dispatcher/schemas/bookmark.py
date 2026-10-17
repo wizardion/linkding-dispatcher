@@ -1,4 +1,6 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from dispatcher.core import encode_url
 
 
 class LinkdingBookmark(BaseModel):
@@ -11,6 +13,14 @@ class LinkdingBookmark(BaseModel):
     archived: bool = Field(default=False, alias="is_archived")
     description: str | None = None
     preview_image_url: str | None = None
+
+    @field_validator("url", mode="before")
+    @classmethod
+    def override_url_validation(cls, value: str) -> str:
+        if not value.startswith(("http://", "https://")):
+            raise Exception("Url is not valid")
+
+        return encode_url(value.strip().lower())
 
 
 class Bookmark(LinkdingBookmark):

@@ -1,9 +1,9 @@
 import logging
-from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 import httpx
 
 from dispatcher.core.settings import LinkdingSettings
+from dispatcher.core.utils import encode_url
 from dispatcher.schemas.bookmark import Bookmark, LinkdingBookmark, Metadata
 
 logger = logging.getLogger(__name__)
@@ -21,30 +21,13 @@ class LinkdingService:
         self.bundles_set = bundles_set or set()
         self.api_endpoint = f"{self.linkding_url}/api/bookmarks"
 
-    @classmethod
-    def encode_url(cls, url: str) -> str:
-        split_url = urlsplit(url)
-        escaped_path = quote(split_url.path, safe="/")
-        query_params = parse_qsl(split_url.query)
-        escaped_query = urlencode(query_params)
-
-        return urlunsplit(
-            (
-                split_url.scheme,
-                split_url.netloc,
-                escaped_path,
-                escaped_query,
-                split_url.fragment,
-            )
-        )
-
     async def check_bookmark(self, url: str) -> tuple[Bookmark | None, Metadata | None]:
         headers = {"Authorization": f"Token {self.linkding_token}"}
 
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    f"{self.api_endpoint}/check/?url={self.encode_url(url)}",
+                    f"{self.api_endpoint}/check/?url={encode_url(url)}",
                     headers=headers,
                     timeout=5.0,
                 )
@@ -105,14 +88,12 @@ class LinkdingService:
                     elif isinstance(details, dict):
                         error = details.get("msg", data)
 
-                    logger.error(f"Saving bookmark failed. {error}")
-
-                    return None
+                    raise Exception(error)
 
                 return LinkdingBookmark.model_validate(data)
 
         except Exception as ex:
-            logger.error(f"Saving bookmark failed. {ex}")
+            logger.error(f"Saving bookmark failed. {ex}, \nurl: {model.url}")
 
         return None
 

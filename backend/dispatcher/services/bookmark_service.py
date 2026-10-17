@@ -5,7 +5,7 @@ from pydantic import TypeAdapter
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from dispatcher.core import db_cache
+from dispatcher.core import db_cache, encode_url
 from dispatcher.core.settings import CacheStrategy
 from dispatcher.db import (
     LinkdingDBBookmark,
@@ -43,7 +43,10 @@ class BookmarkService:
         if not url:
             return None
 
-        variants = [url, url.rstrip("/") if url.endswith("/") else url + "/"]
+        variants = [
+            encode_url(url),
+            encode_url(url.rstrip("/")) if url.endswith("/") else encode_url(url + "/"),
+        ]
 
         async with async_session_factory() as session:
             query = (
