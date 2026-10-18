@@ -42,6 +42,12 @@ class LinkdingDBBookmark(Base):
     favicon_file: Mapped[str | None] = mapped_column(String(512), nullable=True)
     preview_image_file: Mapped[str | None] = mapped_column(String(512), nullable=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey("auth_user.id"))
+    date_added: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    date_modified: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
 
 
 class LinkdingDBBundle(Base):
